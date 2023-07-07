@@ -21,9 +21,6 @@ class TrimeshRenderer:
             img_size: [h, w] specify frame size of rendered mesh (optional)
         """
 
-        import icecream
-        icecream.ic("Entered TrimeshRenderer.__call__")
-
         if img is not None:
             h, w = img.shape[:2]
         elif img_size is not None:

@@ -1,7 +1,10 @@
+import logging
 import pickle
 import sys
 
 import cv2
+
+import vlogging
 
 if sys.platform == "darwin":
     import matplotlib
@@ -135,7 +138,7 @@ def preprocess_image(img_path, img_size):
 
     scale = 1.
     if np.max(img.shape[:2]) != img_size:
-        print('Resizing image to {}'.format(img_size))
+        # print('Resizing image to {}'.format(img_size))
         scale = (float(img_size) / np.max(img.shape[:2]))
 
     image_scaled, actual_factor = resize_img(img, scale)
@@ -206,6 +209,49 @@ def visualize(renderer, img: np.ndarray, params: dict, verts, cam, joints):
     plot.savefig('/tmp/testplot.png')
 
     # plot.show()
+
+
+def visualize_v2(
+        renderer, img: np.ndarray, image_path: str,
+        logger: logging.Logger, params: dict, verts, cam, joints):
+    """Renders the result in original image coordinate frame."""
+
+    figure = plot.figure()
+
+    vert_shifted, joints_orig = get_original(params, verts, cam, joints)
+
+    # Render results
+    img_kp2d = draw_2d_on_image(img, joints_orig)
+    img_overlay = renderer(vert_shifted, img=img, bg_color=np.array((255.0, 255.0, 255.0, 1)))
+
+    img_mesh = renderer(vert_shifted, img_size=img.shape[:2])
+    img_mesh_rot1 = renderer.rotated(vert_shifted, 60, img_size=img.shape[:2])
+    img_mesh_rot2 = renderer.rotated(vert_shifted, -60, img_size=img.shape[:2])
+
+    gs = gridspec.GridSpec(2, 3)
+    gs.update(wspace=0.25, hspace=0.25)
+
+    plot.axis('off')
+    plot.clf()
+
+    def put_image_on_axis(_img, i, title):
+        ax = plot.subplot(gs[i])
+        ax.imshow(_img)
+        ax.set_title(title)
+        ax.axis('off')
+
+    put_image_on_axis(img, 0, 'Input image')
+    put_image_on_axis(img_kp2d, 1, '2D Joint locations')
+    put_image_on_axis(img_overlay, 2, '3D Mesh Overlay')
+    put_image_on_axis(img_mesh, 3, '3D Mesh')
+    put_image_on_axis(img_mesh_rot1, 4, 'rotated 60 degree')
+    put_image_on_axis(img_mesh_rot2, 5, 'rotated -60 degree')
+
+    plot.savefig('/tmp_plot.png')
+
+    logger.info(
+        vlogging.VisualRecord(image_path, figure)
+    )
 
 
 def draw_2d_on_image(input_image, joints, draw_edges=True, vis=None):

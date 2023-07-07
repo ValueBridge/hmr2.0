@@ -23,7 +23,7 @@ def build_app_container(context):
 
 
 @invoke.task
-def run(context):
+def run(context, config_path):
     """
     Run app container
 
@@ -34,6 +34,10 @@ def run(context):
 
     import os
 
+    import photobridge.host.utilities
+
+    config = photobridge.host.utilities.read_yaml(config_path)
+
     # Define run options that need a bit of computations
     run_options = {
         # Use gpu runtime if host has cuda installed
@@ -43,7 +47,8 @@ def run(context):
     command = (
         "docker run -it --rm "
         "{gpu_capabilities} "
-        "-v /tmp/hmr_v2:/tmp "
+        f"-v {os.path.abspath(config.logging_output_directory_on_host)}:/tmp "
+        f"-v {os.path.abspath(config.data_dir_on_host)}:{config.data_dir} "
         "-v $PWD:/app -w /app "
         "photobridge/hmr_v2:latest /bin/bash"
     ).format(**run_options)
