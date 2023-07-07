@@ -66,22 +66,19 @@ class Model:
         self._setup_summary()
 
     def _build_model(self):
-        print('building model...\n')
 
         physical_devices = tf.config.experimental.list_physical_devices('GPU')
         if physical_devices:
             tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
-        gen_input = ((self.config.BATCH_SIZE,) + self.config.ENCODER_INPUT_SHAPE)
+        # gen_input = ((self.config.BATCH_SIZE,) + self.config.ENCODER_INPUT_SHAPE)
 
         self.generator = Generator()
-        import icecream
-        icecream.ic(gen_input)
         # self.generator.build(input_shape=gen_input)
         self.generator_opt = tf.optimizers.Adam(learning_rate=self.config.GENERATOR_LEARNING_RATE)
 
         if not self.config.ENCODER_ONLY:
-            disc_input = (self.config.BATCH_SIZE, self.config.NUM_JOINTS * 9 + self.config.NUM_SHAPE_PARAMS)
+            # disc_input = (self.config.BATCH_SIZE, self.config.NUM_JOINTS * 9 + self.config.NUM_SHAPE_PARAMS)
 
             self.discriminator = Discriminator()
             # self.discriminator.build(input_shape=disc_input)
@@ -100,13 +97,8 @@ class Model:
                 generator=self.generator,
                 generator_opt=self.generator_opt)
 
-        print("About to create checkpoint manager")
-
         self.checkpoint_manager = tf.train.CheckpointManager(checkpoint, self.config.LOG_DIR, max_to_keep=5)
 
-        print("Created checkpoint manager")
-
-        print("About to restore from latest checkpoint")
         # if a checkpoint exists, restore the latest checkpoint.
         self.restore_check = None
         if self.checkpoint_manager.latest_checkpoint:
@@ -114,9 +106,7 @@ class Model:
             if restore_path is None:
                 restore_path = self.checkpoint_manager.latest_checkpoint
 
-            print("About to restory from latest checkpoint")
             self.restore_check = checkpoint.restore(restore_path).expect_partial()
-            print('Checkpoint restored from {}'.format(restore_path))
         else:
             print("oh, no checkpoint was available")
 

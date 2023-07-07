@@ -1,10 +1,19 @@
 import cv2
+import icecream
 import numpy as np
+import pickle
 import trimesh
 import trimesh.transformations as trans
 
-from visualise.vis_util import load_faces
+import main.config
 
+
+def load_faces():
+    c = main.config.Config()
+    with open(c.SMPL_MODEL_PATH, "rb") as f:
+        model = pickle.load(f)
+
+    return model["f"].astype(np.int32)
 
 class TrimeshRenderer:
 
@@ -35,25 +44,32 @@ class TrimeshRenderer:
         if bg_color is not None:
             bg_color = np.zeros(4)
 
-        image_bytes = scene.save_image(resolution=(w, h), background=bg_color, visible=False)
+        image_bytes = scene.save_image(resolution=(w, h), background=bg_color, visible=True)
         image = cv2.imdecode(np.frombuffer(image_bytes, np.uint8), -1)
 
-        if img is not None:
-            img = cv2.cvtColor(img, cv2.COLOR_RGB2RGBA)
-            x1, x2 = 0, img.shape[1]
-            y1, y2 = 0, img.shape[0]
+        # icecream.ic("Insider TrimeshRenderer.__call__")
+        # icecream.ic(img.shape)
 
-            alpha_mesh = image[:, :, 3] / 255.0
-            alpha_image = 1.0 - alpha_mesh
+        # if img is not None:
+        #     img = cv2.cvtColor(img, cv2.COLOR_RGB2RGBA)
+        #     x1, x2 = 0, img.shape[1]
+        #     y1, y2 = 0, img.shape[0]
 
-            for c in range(0, 3):
-                img[y1:y2, x1:x2, c] = (alpha_mesh * image[:, :, c] + alpha_image * img[y1:y2, x1:x2, c])
+        #     alpha_mesh = image[:, :, 3] / 255.0
+        #     alpha_image = 1.0 - alpha_mesh
 
-            image = img
+        #     # icecream.ic(alpha_image)
+        #     # icecream.ic(alpha_mesh)
+
+        #     for c in range(0, 3):
+        #         img[y1:y2, x1:x2, c] = (alpha_mesh * image[:, :, c] + alpha_image * img[y1:y2, x1:x2, c])
+
+        #     image = img
 
         return image
 
-    def mesh(self, verts):
+    def mesh(self, verts) -> trimesh.Trimesh:
+
         mesh = trimesh.Trimesh(
             vertices=verts,
             faces=self.faces,
