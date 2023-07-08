@@ -39,34 +39,21 @@ class TrimeshRenderer:
 
         mesh = self.mesh(verts)
         scene = mesh.scene()
-        # scene.show()
 
-        if bg_color is not None:
-            bg_color = np.zeros(4)
+        mesh_image_bytes = scene.save_image(resolution=(w, h), background=bg_color, visible=True)
 
-        image_bytes = scene.save_image(resolution=(w, h), background=bg_color, visible=True)
-        image = cv2.imdecode(np.frombuffer(image_bytes, np.uint8), -1)
+        mesh_image = cv2.imdecode(np.frombuffer(mesh_image_bytes, np.uint8), -1)
 
-        # icecream.ic("Insider TrimeshRenderer.__call__")
-        # icecream.ic(img.shape)
+        if img is not None:
 
-        # if img is not None:
-        #     img = cv2.cvtColor(img, cv2.COLOR_RGB2RGBA)
-        #     x1, x2 = 0, img.shape[1]
-        #     y1, y2 = 0, img.shape[0]
+            overlay_image = cv2.cvtColor(img, cv2.COLOR_RGB2RGBA)
 
-        #     alpha_mesh = image[:, :, 3] / 255.0
-        #     alpha_image = 1.0 - alpha_mesh
+            mesh_mask = mesh_image[:, :, 0] > 0
+            overlay_image[mesh_mask, :3] = mesh_image[mesh_mask, :3]
 
-        #     # icecream.ic(alpha_image)
-        #     # icecream.ic(alpha_mesh)
+            return cv2.cvtColor(overlay_image, cv2.COLOR_RGBA2RGB)
 
-        #     for c in range(0, 3):
-        #         img[y1:y2, x1:x2, c] = (alpha_mesh * image[:, :, c] + alpha_image * img[y1:y2, x1:x2, c])
-
-        #     image = img
-
-        return image
+        return mesh_image
 
     def mesh(self, verts) -> trimesh.Trimesh:
 

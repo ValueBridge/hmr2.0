@@ -15,6 +15,9 @@ def predictions_on_photobridge_data(_context, config_path):
         config_path (str): path to configuration file
     """
 
+    import pyglet
+    pyglet.options["headless"] = True
+
     import glob
     import os
 
@@ -68,3 +71,38 @@ def predictions_on_photobridge_data(_context, config_path):
             verts=vertices,
             cam=cam,
             joints=joints)
+
+
+@invoke.task
+def render_simple_mesh(_context):
+    """
+    Use trimesh to create and render a mesh of a simple cube
+    """
+
+    import pyglet
+    pyglet.options["headless"] = True
+
+    import cv2
+    import numpy as np
+    import trimesh
+    import trimesh.viewer
+
+    mesh = trimesh.creation.box()
+
+    # Rotate mesh by 45 degrees
+    mesh.apply_transform(trimesh.transformations.rotation_matrix(np.radians(45), [0, 0, 1]))
+
+    # Rotate mesh by 30 degrees towards the camera
+    mesh.apply_transform(trimesh.transformations.rotation_matrix(np.radians(30), [1, 0, 0]))
+
+    # Make every face of mesh different color
+    mesh.visual.face_colors = trimesh.visual.random_color()
+
+    # Draw mesh on a numpy array
+    scene = mesh.scene()
+
+    image_bytes = scene.save_image(resolution=[1920, 1080], background=(20, 200, 127, 1), visible=True)
+
+    image = cv2.imdecode(np.frombuffer(image_bytes, np.uint8), -1)
+
+    cv2.imwrite("/logs/render.jpg", image)

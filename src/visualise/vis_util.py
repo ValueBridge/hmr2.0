@@ -227,7 +227,7 @@ def visualize_v2(
     img_overlay = renderer(
         vert_shifted,
         img=img.copy(),
-        bg_color=np.array((255, 0, 127, 0.5))
+        bg_color=(0, 0, 0, 1)
     )
 
     gs = matplotlib.gridspec.GridSpec(2, 3)
@@ -247,7 +247,7 @@ def visualize_v2(
 
     put_image_on_axis(img_overlay, 2, '3D Mesh Overlay')
 
-    vertices_projections = main.model_util.batch_orthographic_projection(np.array([verts]), cam)[0]
+    vertices_projections = main.model_util.batch_orthographic_projection(np.array([verts]), cam).numpy()[0]
     vertices_projections = ((vertices_projections + 1) * 0.5) * [img.shape[1], img.shape[0]]
 
     vertices_cirles_image = draw_vertices_circle(img.copy(), vertices_projections)

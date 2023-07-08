@@ -46,8 +46,8 @@ def run(context, config_path):
 
     command = (
         "docker run -it --rm "
-        "{gpu_capabilities} "
-        f"-v {os.path.abspath(config.logging_output_directory_on_host)}:/tmp "
+        # "{gpu_capabilities} "
+        f"-v {os.path.abspath(config.logging_output_directory_on_host)}:{config.logging_output_directory} "
         f"-v {os.path.abspath(config.data_dir_on_host)}:{config.data_dir} "
         "-v $PWD:/app -w /app "
         "photobridge/hmr_v2:latest /bin/bash"

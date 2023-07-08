@@ -1,10 +1,12 @@
 # syntax = docker/dockerfile:experimental
-FROM tensorflow/tensorflow:2.4.3-gpu
+FROM python:3.6.15
 
 # Remove cuda sources list since it's key is not valid anymore, update and install a few dependencies
-RUN rm /etc/apt/sources.list.d/cuda.list && \
-    rm /etc/apt/sources.list.d/nvidia-ml.list && \
-    apt update && apt install -y libcairo2-dev libgl1 freeglut3-dev xvfb
+# RUN rm /etc/apt/sources.list.d/cuda.list && \
+#     rm /etc/apt/sources.list.d/nvidia-ml.list && \
+#     apt update && apt install -y libcairo2-dev libgl1 freeglut3-dev xvfb
+
+RUN apt update && apt install -y libcairo2-dev libgl1 freeglut3-dev xvfb
 
 RUN mkdir -p /root/.keras/models
 ADD https://storage.googleapis.com/tensorflow/keras-applications/resnet/resnet50v2_weights_tf_dim_ordering_tf_kernels_notop.h5 \
