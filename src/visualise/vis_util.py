@@ -1,17 +1,16 @@
-import pickle
+import logging
+import os
 import sys
 
 import cv2
-
-if sys.platform == "darwin":
-    import matplotlib
-
-    matplotlib.use("macOSX")
-
+import icecream
 import matplotlib.pyplot as plot
+import matplotlib.gridspec
 import numpy as np
-import os
-from matplotlib import gridspec
+import vlogging
+
+import main.model_util
+import visualise.trimesh_renderer
 
 # to make run from console for module import
 sys.path.append(os.path.abspath('..'))
@@ -19,7 +18,6 @@ sys.path.append(os.path.abspath('..'))
 # tf INFO and WARNING messages are not printed
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-from main.config import Config
 from main.dataset import Dataset
 from main.local import LocalConfig
 
@@ -93,14 +91,6 @@ def _get_parent_ids(joints, index=1):
     return parents
 
 
-def load_faces():
-    c = Config()
-    with open(c.SMPL_MODEL_PATH, "rb") as f:
-        model = pickle.load(f)
-
-    return model["f"].astype(np.int32)
-
-
 def get_original(params, verts, cam, joints):
     # original image params
     img_size = params['img_size']
@@ -129,13 +119,24 @@ def get_original(params, verts, cam, joints):
     return vert_shifted, kp_original  # , cam_for_render
 
 
+def get_unshifted_vertices(params, verts, cam, joints):
+    """
+    Get vertices in coordinates of original image
+    """
+
+    img_scale = params['scale']
+    undo_scale = 1. / np.array(img_scale)
+
+    return verts * undo_scale
+
+
 def preprocess_image(img_path, img_size):
     img = cv2.imread(img_path)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
     scale = 1.
     if np.max(img.shape[:2]) != img_size:
-        print('Resizing image to {}'.format(img_size))
+        # print('Resizing image to {}'.format(img_size))
         scale = (float(img_size) / np.max(img.shape[:2]))
 
     image_scaled, actual_factor = resize_img(img, scale)
@@ -173,19 +174,11 @@ def visualize(renderer, img: np.ndarray, params: dict, verts, cam, joints):
     img_kp2d = draw_2d_on_image(img, joints_orig)
     img_overlay = renderer(vert_shifted, img=img, bg_color=np.array((255.0, 255.0, 255.0, 1)))
 
-    import icecream
-    icecream.ic(type(img_overlay))
-    icecream.ic(img_overlay.shape)
-
-    cv2.imwrite("/tmp/img_overlay.jpg", img_overlay)
     img_mesh = renderer(vert_shifted, img_size=img.shape[:2])
     img_mesh_rot1 = renderer.rotated(vert_shifted, 60, img_size=img.shape[:2])
     img_mesh_rot2 = renderer.rotated(vert_shifted, -60, img_size=img.shape[:2])
 
-    cv2.imwrite("/tmp/img_overlay_rot1.jpg", img_mesh_rot1)
-    cv2.imwrite("/tmp/img_overlay_rot2.jpg", img_mesh_rot2)
-
-    gs = gridspec.GridSpec(2, 3)
+    gs = matplotlib.gridspec.GridSpec(2, 3)
     gs.update(wspace=0.25, hspace=0.25)
     plot.axis('off')
     plot.clf()
@@ -206,6 +199,64 @@ def visualize(renderer, img: np.ndarray, params: dict, verts, cam, joints):
     plot.savefig('/tmp/testplot.png')
 
     # plot.show()
+
+
+def draw_vertices_circle(image, vertices):
+
+    image = image.copy()
+
+    # Draw a circle for every vertex
+    for i in range(vertices.shape[0]):
+        cv2.circle(image, (int(vertices[i, 0]), int(vertices[i, 1])), 3, (0, 255, 0), -1)
+
+    return image
+
+
+def visualize_v2(
+        renderer: visualise.trimesh_renderer.TrimeshRenderer, img: np.ndarray, image_path: str,
+        logger: logging.Logger, params: dict, verts, cam, joints):
+    """Renders the result in original image coordinate frame."""
+
+    figure = plot.figure()
+
+    vert_shifted, joints_orig = get_original(params, verts, cam, joints)
+
+    # Render results
+    img_kp2d = draw_2d_on_image(img.copy(), joints_orig)
+
+    img_overlay = renderer(
+        vert_shifted,
+        img=img.copy(),
+        bg_color=(0, 0, 0, 1)
+    )
+
+    gs = matplotlib.gridspec.GridSpec(2, 3)
+    gs.update(wspace=0.25, hspace=0.25)
+
+    plot.axis('off')
+    plot.clf()
+
+    def put_image_on_axis(_img, i, title):
+        ax = plot.subplot(gs[i])
+        ax.imshow(_img)
+        ax.set_title(title)
+        ax.axis('off')
+
+    put_image_on_axis(img, 0, 'Input image')
+    put_image_on_axis(img_kp2d, 1, '2D Joint locations')
+
+    put_image_on_axis(img_overlay, 2, '3D Mesh Overlay')
+
+    vertices_projections = main.model_util.batch_orthographic_projection(np.array([verts]), cam).numpy()[0]
+    vertices_projections = ((vertices_projections + 1) * 0.5) * [img.shape[1], img.shape[0]]
+
+    vertices_cirles_image = draw_vertices_circle(img.copy(), vertices_projections)
+
+    put_image_on_axis(vertices_cirles_image, 4, 'My overlay')
+
+    logger.info(
+        vlogging.VisualRecord(image_path, figure)
+    )
 
 
 def draw_2d_on_image(input_image, joints, draw_edges=True, vis=None):
